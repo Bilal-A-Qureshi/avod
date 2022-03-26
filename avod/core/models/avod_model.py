@@ -651,10 +651,10 @@ class AvodModel(model.DetectionModel):
 
         return mb_mask, mb_class_label_indices, mb_gt_indices
 
-    def create_feed_dict(self):
-        feed_dict = self._rpn_model.create_feed_dict()
+    def create_feed_dict(self,current_val_of_ep):
+        feed_dict, valOfEpoch = self._rpn_model.create_feed_dict(current_val_of_ep)
         self.sample_info = self._rpn_model.sample_info
-        return feed_dict
+        return feed_dict,valOfEpoch
 
     def loss(self, prediction_dict):
         # Note: The loss should be using mini-batch values only
