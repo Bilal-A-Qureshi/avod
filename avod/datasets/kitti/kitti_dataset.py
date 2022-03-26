@@ -371,7 +371,7 @@ class KittiDataset:
         np.random.shuffle(perm)
         self.sample_list = self.sample_list[perm]
 
-    def next_batch(self, batch_size, shuffle=True):
+    def next_batch(self,current_val_of_ep, batch_size, shuffle=True):
         """
         Retrieve the next `batch_size` samples from this data set.
 
@@ -382,7 +382,9 @@ class KittiDataset:
         Returns:
             list of dictionaries containing sample information
         """
-
+        
+        yes=current_val_of_ep
+        print("total samples = ",self.num_samples)
         # Create empty set of samples
         samples_in_batch = []
 
@@ -390,6 +392,8 @@ class KittiDataset:
         # Shuffle only for the first epoch
         if self.epochs_completed == 0 and start == 0 and shuffle:
             self._shuffle_samples()
+
+        print("start is ",start)
 
         # Go to the next epoch
         if start + batch_size >= self.num_samples:
@@ -416,6 +420,8 @@ class KittiDataset:
             # Append the rest of the batch
             samples_in_batch.extend(self.load_samples(np.arange(start, end)))
 
+            yes=yes+1
+
         else:
             self._index_in_epoch += batch_size
             end = self._index_in_epoch
@@ -423,4 +429,6 @@ class KittiDataset:
             # Append the samples in the range to the batch
             samples_in_batch.extend(self.load_samples(np.arange(start, end)))
 
-        return samples_in_batch
+
+        return samples_in_batch, yes
+
