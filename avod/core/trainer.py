@@ -12,6 +12,9 @@ from avod.builders import optimizer_builder
 from avod.core import trainer_utils
 from avod.core import summary_utils
 
+from tensorboardX import SummaryWriter
+writer = SummaryWriter('/content/avod/avod/data/outputs/all_aug/logs/train')
+
 slim = tf.contrib.slim
 
 
@@ -23,7 +26,9 @@ def train(model, train_config):
         train_config: a train_*pb2 protobuf.
             training i.e. loading RPN weights onto AVOD model.
     """
+    #epoch=-1   #-1 is correct
 
+    
     model = model
     train_config = train_config
     # Get model configurations
@@ -145,9 +150,17 @@ def train(model, train_config):
     print('Starting from step {} / {}'.format(
         global_step, max_iterations))
 
+    current_val_of_ep=0
+    valDef=14848
+    stepCheck=0
+
     # Main Training Loop
     last_time = time.time()
     for step in range(global_step, max_iterations + 1):
+
+        # Create feed_dict for inferencing
+        feed_dict,valOfEpoch = model.create_feed_dict(current_val_of_ep)
+        current_val_of_ep=valOfEpoch
 
         # Save checkpoint
         if step % checkpoint_interval == 0:
@@ -162,9 +175,6 @@ def train(model, train_config):
                 step, max_iterations,
                 checkpoint_path, global_step))
 
-        # Create feed_dict for inferencing
-        feed_dict = model.create_feed_dict()
-
         # Write summaries and train op
         if step % summary_interval == 0:
             current_time = time.time()
@@ -173,14 +183,20 @@ def train(model, train_config):
 
             train_op_loss, summary_out = sess.run(
                 [train_op, summary_merged], feed_dict=feed_dict)
-
+                        
             print('Step {}, Total Loss {:0.3f}, Time Elapsed {:0.3f} s'.format(
                 step, train_op_loss, time_elapsed))
-            train_writer.add_summary(summary_out, step)
+            #train_writer.add_summary(summary_out, step) #to be set
+
+            if step!=0 and stepCheck>0:
+              if step % valDef == 0:
+                print("value of epoch at this scalar = ",(current_val_of_ep-1))
+                print("it came here at step ", step)
+                writer.add_scalar('train/loss',train_op_loss,(current_val_of_ep-1))
+                writer.flush()
 
         else:
             # Run the train op only
             sess.run(train_op, feed_dict)
-
-    # Close the summary writers
-    train_writer.close()
+        
+        stepCheck=stepCheck+1
