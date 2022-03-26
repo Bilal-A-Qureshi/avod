@@ -86,13 +86,19 @@ def main(dataset=None):
         return
 
     car_dataset_config_path = avod.root_dir() + \
-        '/configs/mb_preprocessing/rpn_cars.config'
+        '/configs/mb_preprocessing/cars/cars.config'
     ped_dataset_config_path = avod.root_dir() + \
-        '/configs/mb_preprocessing/rpn_pedestrians.config'
+        '/configs/mb_preprocessing/pedestrians/pedestrians_max_density.config'
     cyc_dataset_config_path = avod.root_dir() + \
-        '/configs/mb_preprocessing/rpn_cyclists.config'
+        '/configs/mb_preprocessing/cyclists.config'
     ppl_dataset_config_path = avod.root_dir() + \
-        '/configs/mb_preprocessing/rpn_people.config'
+        '/configs/mb_preprocessing/people/people_max_min_density.config'
+    all_dataset_config_path = avod.root_dir() + \
+        '/configs/mb_preprocessing/all.config'
+    carped_dataset_config_path = avod.root_dir() + \
+        '/configs/mb_preprocessing/carped/carped.config'
+    per_dataset_config_path = avod.root_dir() + \
+        '/configs/mb_preprocessing/person.config'
 
     ##############################
     # Options
@@ -100,10 +106,13 @@ def main(dataset=None):
     # Serial vs parallel processing
     in_parallel = True
 
-    process_car = True   # Cars
-    process_ped = False  # Pedestrians
+    process_car = False   # Cars
+    process_ped = False # Pedestrians
     process_cyc = False  # Cyclists
-    process_ppl = True   # People (Pedestrians + Cyclists)
+    process_ppl = False   # People (Pedestrians + Cyclists)
+    process_all = True # Cars + Pedestrians + Cyclists
+    process_carped = False # Cars + Pedestrians
+    process_per = False   # Person (Pedestrians + Cyclists joint class)
 
     # Number of child processes to fork, samples will
     #  be divided evenly amongst the processes (in_parallel must be True)
@@ -111,6 +120,9 @@ def main(dataset=None):
     num_ped_children = 8
     num_cyc_children = 8
     num_ppl_children = 8
+    num_all_children = 8
+    num_carped_children = 8
+    num_per_children = 8
 
     ##############################
     # Dataset setup
@@ -127,6 +139,15 @@ def main(dataset=None):
     if process_ppl:
         ppl_dataset = DatasetBuilder.load_dataset_from_config(
             ppl_dataset_config_path)
+    if process_all:
+        all_dataset = DatasetBuilder.load_dataset_from_config(
+            all_dataset_config_path)
+    if process_carped:
+        carped_dataset = DatasetBuilder.load_dataset_from_config(
+            carped_dataset_config_path)
+    if process_per:
+        per_dataset = DatasetBuilder.load_dataset_from_config(
+            per_dataset_config_path)
 
     ##############################
     # Serial Processing
@@ -140,6 +161,12 @@ def main(dataset=None):
             do_preprocessing(cyc_dataset, None)
         if process_ppl:
             do_preprocessing(ppl_dataset, None)
+        if process_all:
+            do_preprocessing(all_dataset, None)
+        if process_carped:
+            do_preprocessing(carped_dataset, None)
+        if process_per:
+            do_preprocessing(per_dataset, None)
 
         print('All Done (Serial)')
 
@@ -186,6 +213,33 @@ def main(dataset=None):
                 ppl_dataset,
                 ppl_indices_split,
                 num_ppl_children)
+
+        # All (Cars + Pedestrians + Cyclists)
+        if process_all:
+            all_indices_split = split_indices(all_dataset, num_all_children)
+            split_work(
+                all_child_pids,
+                all_dataset,
+                all_indices_split,
+                num_all_children)
+
+        # Carped (Cars + Pedestrians)
+        if process_carped:
+            carped_indices_split = split_indices(carped_dataset, num_carped_children)
+            split_work(
+                all_child_pids,
+                carped_dataset,
+                carped_indices_split,
+                num_carped_children)
+
+        # Person (Pedestrians + Cyclists joint class)
+        if process_per:
+            per_indices_split = split_indices(per_dataset, num_per_children)
+            split_work(
+                all_child_pids,
+                per_dataset,
+                per_indices_split,
+                num_per_children)
 
         # Wait to child processes to finish
         print('num children:', len(all_child_pids))
