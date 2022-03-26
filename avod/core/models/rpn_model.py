@@ -606,7 +606,7 @@ class RpnModel(model.DetectionModel):
 
         return predictions
 
-    def create_feed_dict(self, sample_index=None):
+    def create_feed_dict(self, current_val_of_ep, sample_index=None):
         """ Fills in the placeholders with the actual input values.
             Currently, only a batch size of 1 is supported
 
@@ -635,11 +635,11 @@ class RpnModel(model.DetectionModel):
             while not valid_sample:
                 if self._train_val_test == "train":
                     # Get the a random sample from the remaining epoch
-                    samples = self.dataset.next_batch(batch_size=1)
+                    samples,valOfEpoch = self.dataset.next_batch(current_val_of_ep, batch_size=1)
 
                 else:  # self._train_val_test == "val"
                     # Load samples in order for validation
-                    samples = self.dataset.next_batch(batch_size=1,
+                    samples,valOfEpoch = self.dataset.next_batch(current_val_of_ep, batch_size=1,
                                                       shuffle=False)
 
                 # Only handle one sample at a time for now
@@ -723,7 +723,7 @@ class RpnModel(model.DetectionModel):
         for key, value in self.placeholders.items():
             feed_dict[value] = self._placeholder_inputs[key]
 
-        return feed_dict
+        return feed_dict, valOfEpoch
 
     def _fill_anchor_pl_inputs(self,
                                anchors_info,
